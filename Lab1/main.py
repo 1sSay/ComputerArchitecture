@@ -1,139 +1,150 @@
 import sys
+from typing import Self
 
 ROUND_METHOD = "3"
 
 
 class FloatingPointNumber:
-    def __init__(self, size, number) -> None:
+    def __init__(self, number: int, size: int) -> None:
         self.size = size
+        self.number = number
+
+        if size == 16:
+            self.mantissa_bits = 11
+            self.exp_bits = 5
+        elif size == 32:
+            self.mantissa_bits = 24
+            self.exp_bits = 8
+        
+        self.sign = number >> (size - 1)
+        self.mantissa = (1 << (self.exp_bits - 1)) + (number & ((1 << (self.exp_bits - 1)) - 1))
+        self.exp = ((number >> (self.mantissa_bits - 1)) & ((1 << self.exp_bits) - 1)) - (1 << (self.exp_bits - 1)) + 1
+        
+    def print(self):
+        if self.exp >= 0:
+            str_exp = '+' + str(self.exp)
+        else:
+            str_exp = str(self.exp)
+        
+        print(bin(self.mantissa))
+        
+        print('0x1.' + '' + 'p' + str_exp)
 
 
 class FixedPointNumber:
-    def __init__(self, a: int, b: int, number: str) -> None:
+    def __init__(self, number: int, a: int, b: int) -> None:
         self.a = a
         self.b = b    
-        self.number = number + [0] * (a + b - len(number))
+        self.number = number
     
-    def __add__(self, second):
-        result = [0] * (self.a + self.b)
-        carry = 0
+    def __add__(self, second: Self) -> Self:
+        result = (self.number + second.number) % (2 ** (self.a + self.b))
         
-        for i in range(self.a + self.b):
-            result[i] = (self.number[i] + second.number[i] + carry) % 2
-            carry = (self.number[i] + second.number[i] + carry) // 2
+        return FixedPointNumber(result, self.a, self.b)
         
-        return FixedPointNumber(self.a, self.b, result)
     
-    def __sub__(self, second):
-        result = [0] * (self.a + self.b)
+    def __sub__(self, second: Self) -> Self:
+        result = self.number - second.number
         
-        return result
+        if result < 0:
+            result += 2 ** (self.a + self.b) - 1
+        
+        return FixedPointNumber(result, self.a, self.b)
     
-    def __mul__(self, second):
-        result = [0] * (self.a + self.b)
+    def __mul__(self, second: Self) -> Self:
+        result = self.number * second.number
+        result >>= self.b
+        result &= (1 << (self.a + self.b + 1)) - 1
         
-        return result
+        return FixedPointNumber(result, self.a, self.b)
     
-    def __truediv__(self, second):
-        result = [0] * (self.a + self.b)
+    def __truediv__(self, second: Self) -> Self:
+        result = self.number
+        result <<= self.b
+        resurt //= second.number
         
-        return result
+        return FixedPointNumber(result, self.a, self.b)
     
     def print(self) -> None:
-        is_negative = self.number[-1]
-        digit_part = list(reversed(self.number[self.b:-1]))
-        fraction_part = list(reversed(self.number[:self.b]))
+        sign = self.number >> (self.a + self.b - 1)
+        digit = (self.number >> self.b) & (2 ** (1 << (self.a - 1)) - 1)
+        fraction_bin = self.number & ((1 << self.b) - 1)
         
-        digit = sum([2 ** i * digit_part[self.a - i - 2] for i in range(self.a - 1)]) - 2 ** (self.a - 1) * is_negative
-        fraction = sum([(5 ** (i + 1)) * fraction_part[i] * (10 ** (self.b - i))for i in range(self.b)])
-        
-        if not is_negative:
-            while fraction >= 1000:
-                fraction //= 10
-        else:
+        if sign:
+            digit -= (1 << self.a)
+            fraction_bin = fraction_bin - (1 << self.b)
+    
+        fraction = fraction_bin * 10 ** 3 // 2 ** self.b
+        if sign and fraction != 0:
             digit += 1
-            fraction = 10 ** len(str(fraction)) - fraction
-            any_1 = False
-            while fraction >= 1000:
-                any_1 = any_1 or fraction % 10
-                fraction //= 10
-            fraction += int(any_1)
-            
-            if fraction == 1000:
-                fraction = 0
-                digit -= 1
         
-        print(str(digit) + '.' + str(fraction).ljust(3, '0'))
-                
+        print(str(digit) + '.' + str(abs(fraction)))
 
 
-def convert_to_binary(number16: str, reverse: bool = False) -> list:
-    if not number16.startswith('0x'):
-        print('Wrong input number (Should start with 0x)')
-        exit(0)
+def check_input(number_type: str, round_method: str, number1: str, operation: str, number2: str):
+    errors = list()
     
-    try:
-        binary = bin(int(number16[2:], 16))[2:]
-        binary = [int(i) for i in binary]
-        if reverse:
-            binary.reverse()
+    def is_fixed_point(number_type):
+        if number_type.count('.') == 1:
+            a, b = number_type.split('.')
+            if a.isdigit() and b.isdigit() and \
+                    int(a) > 0 and int(a) + int(b) <= 32:
+                return True
+        return False
+    
+    def check_number(number):
+        if number is None:
+            return
         
-        return binary
-    except ValueError:
-        print("Wrong input number")
-        exit(0)
+        if not number.startswith('0x'):
+            errors.append('Wrong input number (Should start with 0x)')
+            return
+        
+        try:
+            int(number[2:], 16)
+        except ValueError:
+            errors.append('Wrong input number (Not in hex)')
+            return
+        
+        if (number_type == 'h' and int(number[2:], 16) >= 2 ** 16) or \
+           (number_type == 'f' and int(number[2:], 16) >= 2 ** 64) or \
+           (number_type == is_fixed_point(number_type) and \
+                int(number_type[2:], 16) >= 2 ** sum([int(i) for i in number_type.split('.')])):
+            errors.append('Too big number')
+            return
 
 
-def is_fixed_point(number_type):
-    if number_type.count('.') == 1:
-        a, b = number_type.split('.')
-        if a.isdigit() and b.isdigit() and int(a) > 0 and int(a) + int(b) <= 32:
-            return True
-    
-    return False
-
-
-def check_number_type(number_type: str) -> bool:
+    # Checking number type
     if not (number_type == 'h' or \
            number_type == 'f' or \
            is_fixed_point(number_type)):
-        print("Invalid number type")
-        exit(0)
+        errors.append("Invalid number type")
+
+    # Checking round method
+    if round_method != ROUND_METHOD:
+        errors.append("Wrong round method. Can only process"
+                      "round toward negative infinity (3)")
+
+    # Checking operation
+    if not (operation is None or operation in '+-*/'):
+        errors.append("Wrong operation. Use +, -, * or /")
+
+    # Checking numbers
+    check_number(number1)
+    check_number(number2)
+    
+    return errors
 
 
-def check_number_size(max_size: int, number1: list, number2: list = list()):
-    if not (max_size >= len(number1) and max_size >= len(number2)):
-        print("Number is too big")
-        exit(0)
-
-
-def check_round_method(round_method):
-    if not round_method == ROUND_METHOD:
-        print("Wrong round method. Can only process round toward negative infinity (3)")
-        exit(0)
-
-
-def round_and_print(number_type: str, number: str) -> None:
+def to_class(number, number_type):
+    number = int(number[2:], 16)
     if number_type == 'h':
-        number = convert_to_binary(number)
-        check_number_size(16, number)
-        
-        number = FloatingPointNumber(16, number)
-        number.print()
+        return FloatingPointNumber(number, 16)
     elif number_type == 'f':
-        number = convert_to_binary(number)
-        check_number_size(32, number)
-        
-        number = FloatingPointNumber(32, number)
-        number.print()
+        return FloatingPointNumber(number, 32)
     else:
         a, b = map(int, number_type.split('.'))
-        
-        number = convert_to_binary(number, reverse=True)
-        check_number_size(a + b, number)
-        
-        number = FixedPointNumber(a, b, number)
-        number.print()
+        return FixedPointNumber(number, a, b)
 
 
 if __name__ == '__main__':
@@ -141,15 +152,34 @@ if __name__ == '__main__':
     if len(args) != 3 and len(args) != 5:
         print("Wrong arguments count (need 3 or 5)")
         exit(0)
-
-    number_type = args[0]
-    check_number_type(number_type)
-        
-    round_method = args[1]
-    check_round_method(round_method)
     
     if len(args) == 3:
-        number = args[2]
-        round_and_print(number_type, number)
-    elif len(args) == 5:
-        pass
+        args = args + [None, None]
+    
+    number_type = args[0]
+    round_method = args[1]
+    number1 = args[2]
+    operation = args[3]
+    number2 = args[4]
+    
+    errors = check_input(number_type, round_method, number1, operation, number2)
+    if len(errors):
+        print(*errors, sep='\n')
+        exit(0)
+    
+    number1 = to_class(number1, number_type)
+    result = number1
+    
+    if operation is not None:
+        number2 = to_class(number2, number_type)
+        
+        if operation == '+':
+            result = number1 + number2
+        elif operation == '-':
+            result = number1 - number2
+        elif operation == '*':
+            result = number1 * number2
+        else:
+            result = number1 / number2
+    
+    result.print()
