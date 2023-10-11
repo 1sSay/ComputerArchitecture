@@ -50,23 +50,23 @@ class FloatingPointNumber:
         if not self.is_subnormal:
             self.mantissa += (1 << (self.mantissa_size - 1))
 
-    def shift(self, sign, exp, mantissa):
-        print(mantissa, exp)
-    
+    def shift(self, sign, exp, mantissa, mul=False):
         for_negative_round = 0
-        while len(bin(mantissa)[2:]) > 24:
+        while len(bin(mantissa)[2:]) > self.mantissa_size:
             for_negative_round = for_negative_round or (mantissa & 1)
             mantissa >>= 1
-            exp += 1
+            if not mul:
+                exp += 1
 
-        if for_negative_round:
+        if sign and for_negative_round:
             mantissa += 1
             if mantissa == (1 << self.mantissa_size):
                 mantissa >>= 1
 
-        while len(bin(mantissa)[2:]) < 24 and exp > 0:
+        while len(bin(mantissa)[2:]) < self.mantissa_size and exp > 0:
             mantissa <<= 1
-            exp -= 1
+            if not mul:
+                exp -= 1
 
         return sign, exp, mantissa
 
@@ -85,12 +85,15 @@ class FloatingPointNumber:
         if self.is_negative_inf or second.is_negative_inf:
             return FloatingPointNumber(self.neg_inf, self.size)
 
+        if (self.is_positive_zero or self.is_negative_zero) and \
+           (second.is_positive_zero or second.is_negative_zero):
+            return FloatingPointNumber(self.neg_zero, self.size)
+
         if (self.is_positive_zero or self.is_negative_zero):
             return second
         if (second.is_positive_zero or second.is_negative_zero):
             return self
 
-        exp = max(self.exp, second.exp)
         exp_shift = min(self.exp, second.exp)
 
         shifted_mantissa1 = self.mantissa * (1 << (self.exp - exp_shift))
@@ -107,7 +110,8 @@ class FloatingPointNumber:
                 mantissa = shifted_mantissa2 - shifted_mantissa1
                 sign = second.sign
 
-        sign, exp, mantissa = self.shift(sign, exp, mantissa)
+        sign, exp, mantissa = self.shift(sign, exp_shift, mantissa)
+
 
         if exp >= int('1' * self.exp_size, 2):
             if not sign:
@@ -129,7 +133,6 @@ class FloatingPointNumber:
 
         return FloatingPointNumber(result, self.size)
 
-
     def __sub__(self, second):
         if self.is_nan:
             return self
@@ -140,12 +143,15 @@ class FloatingPointNumber:
            (self.is_negative_inf and second.is_negative_inf):
             return FloatingPointNumber(self.nan, self.size)
 
+        if (self.is_positive_zero or self.is_negative_zero) and \
+           (second.is_positive_zero or second.is_negative_zero):
+            return FloatingPointNumber(self.neg_zero, self.size)
+
         if self.is_positive_inf:
             return FloatingPointNumber(self.inf, self.size)
         if self.is_negative_inf:
             return FloatingPointNumber(self.neg_inf, self.size)
 
-        exp = max(self.exp, second.exp)
         exp_shift = min(self.exp, second.exp)
         shifted_mantissa1 = self.mantissa * (1 << (self.exp - exp_shift))
         shifted_mantissa2 = second.mantissa * (1 << (second.exp - exp_shift))
@@ -161,7 +167,7 @@ class FloatingPointNumber:
                 mantissa = shifted_mantissa2 - shifted_mantissa1
                 sign = 1
 
-        sign, exp, mantissa = self.shift(sign, exp, mantissa)
+        sign, exp, mantissa = self.shift(sign, exp_shift, mantissa)
 
         if exp >= int('1' * self.exp_size, 2):
             if not sign:
@@ -202,9 +208,34 @@ class FloatingPointNumber:
 
         sign = (self.sign + second.sign) & 1
         mantissa = self.mantissa * second.mantissa
-        exp = self.exp + second.exp - self.bias + 1
-        
-        return self.shift(sign, exp, mantissa)
+        exp = self.exp + second.exp - self.bias
+
+        if len(bin(mantissa)[2:]) == self.mantissa_size * 2:
+            if sign:
+                mantissa += 1
+            mantissa >>= 1
+            exp += 1
+
+        sign, exp, mantissa = self.shift(sign, exp, mantissa, mul=True)
+
+        if exp >= int('1' * self.exp_size, 2):
+            if not sign:
+                return FloatingPointNumber(self.inf, self.size)
+            else:
+                return FloatingPointNumber(self.neg_inf, self.size)
+
+        if exp <= 0:
+            while exp < 0 and mantissa > 0:
+                mantissa >>= 1
+
+            if mantissa == 0:
+                return FloatingPointNumber(self.neg_zero, self.size)
+
+        result = (sign << (self.size - 1))
+        result += (exp << (self.mantissa_size - 1))
+        result += mantissa & ((1 << (self.mantissa_size - 1)) - 1)
+
+        return FloatingPointNumber(result, self.size)
 
     def __truediv__(self, second):
         if self.is_nan:
@@ -234,10 +265,29 @@ class FloatingPointNumber:
 
 
         sign = (self.sign + second.sign) & 1
-        exp = self.exp - second.exp + self.bias + 1 - self.mantissa_size
+        exp = self.exp - second.exp + self.bias
         mantissa = (self.mantissa << self.mantissa_size) // second.mantissa
+        
+        sign, exp, mantissa = self.shift(sign, exp, mantissa, mul=True)
+        
+        if exp >= int('1' * self.exp_size, 2):
+            if not sign:
+                return FloatingPointNumber(self.inf, self.size)
+            else:
+                return FloatingPointNumber(self.neg_inf, self.size)
 
-        return self.shift(sign, exp, mantissa)
+        if exp <= 0:
+            while exp < 0 and mantissa > 0:
+                mantissa >>= 1
+
+            if mantissa == 0:
+                return FloatingPointNumber(self.neg_zero, self.size)
+
+        result = (sign << (self.size - 1))
+        result += (exp << (self.mantissa_size - 1))
+        result += mantissa & ((1 << (self.mantissa_size - 1)) - 1)
+
+        return FloatingPointNumber(result, self.size)
 
     def hex_mantissa(self, mantissa):
         result = ''
@@ -272,9 +322,9 @@ class FloatingPointNumber:
 
             shifted_mantissa = self.mantissa
             shift_exp = 0
-            while (shifted_mantissa >> (self.mantissa_size - 1)) == 0:
+            while (shifted_mantissa >> self.mantissa_size - 1) == 0:
                 shifted_mantissa <<= 1
-                shift_exp -= 1
+                shift_exp += 1
 
             return prefix + '1.' + self.hex_mantissa(shifted_mantissa) + 'p' + str(self.exp - self.bias - shift_exp)
 
@@ -304,7 +354,8 @@ class FixedPointNumber:
         return FixedPointNumber(result, self.a, self.b)
 
     def __sub__(self, second: Self) -> Self:
-        result = (self.number + (~second.number + 1)) % (1 << (self.a + self.b))
+        inverted_second = ((1 << (self.a + self.b)) - 1) - second.number + 1
+        result = (self.number + inverted_second) % (1 << (self.a + self.b))
         return FixedPointNumber(result, self.a, self.b)
 
     def __mul__(self, second: Self) -> Self:
