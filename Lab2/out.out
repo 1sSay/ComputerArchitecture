@@ -1,0 +1,104 @@
+#! /usr/bin/vvp
+:ivl_version "12.0 (stable)" "(v12_0-dirty)";
+:ivl_delay_selection "TYPICAL";
+:vpi_time_precision + 0;
+:vpi_module "/usr/lib/ivl/system.vpi";
+:vpi_module "/usr/lib/ivl/vhdl_sys.vpi";
+:vpi_module "/usr/lib/ivl/vhdl_textio.vpi";
+:vpi_module "/usr/lib/ivl/v2005_math.vpi";
+:vpi_module "/usr/lib/ivl/va_math.vpi";
+:vpi_module "/usr/lib/ivl/v2009.vpi";
+S_0x55e5b685c500 .scope package, "$unit" "$unit" 2 1;
+ .timescale 0 0;
+S_0x55e5b685c690 .scope module, "not_switch" "not_switch" 3 1;
+ .timescale 0 0;
+    .port_info 0 /OUTPUT 1 "out";
+    .port_info 1 /INPUT 1 "in";
+L_0x55e5b6872170 .functor BUFT 1, C8<771>, C4<0>, C4<0>, C4<0>;
+o0x7f4fdebed078 .functor BUFZ 1, C4<z>; HiZ drive
+L_0x55e5b6872370 .functor PMOS 1, L_0x55e5b6872170, o0x7f4fdebed078, C4<0>, C4<0>;
+L_0x55e5b6849290 .functor BUFT 1, C8<770>, C4<0>, C4<0>, C4<0>;
+L_0x55e5b6872460 .functor NMOS 1, L_0x55e5b6849290, o0x7f4fdebed078, C4<0>, C4<0>;
+v0x55e5b685a790_0 .net8 "GND", 0 0, L_0x55e5b6849290;  1 drivers, strength-aware
+v0x55e5b6871350_0 .net8 "PWR", 0 0, L_0x55e5b6872170;  1 drivers, strength-aware
+v0x55e5b6871410_0 .net "in", 0 0, o0x7f4fdebed078;  0 drivers
+RS_0x7f4fdebed0a8 .resolv tri, L_0x55e5b6872370, L_0x55e5b6872460;
+v0x55e5b68714b0_0 .net8 "out", 0 0, RS_0x7f4fdebed0a8;  2 drivers, strength-aware
+S_0x55e5b685a600 .scope module, "not_tb" "not_tb" 3 21;
+ .timescale 0 0;
+v0x55e5b6871e30_0 .var "in1", 0 0;
+v0x55e5b6871ed0_0 .var "in2", 0 0;
+v0x55e5b6871fa0_0 .net8 "out", 0 0, L_0x55e5b68725f0;  1 drivers, strength-aware
+v0x55e5b68720a0_0 .var/i "t_value", 31 0;
+S_0x55e5b68715d0 .scope module, "nand2_instance" "nand2" 3 27, 3 9 0, S_0x55e5b685a600;
+ .timescale 0 0;
+    .port_info 0 /OUTPUT 1 "out";
+    .port_info 1 /INPUT 1 "in1";
+    .port_info 2 /INPUT 1 "in2";
+o0x7f4fdebed228 .functor BUFZ 1, C4<z>; HiZ drive
+L_0x55e5b68725f0 .functor NMOS 1, o0x7f4fdebed228, v0x55e5b6871e30_0, C4<0>, C4<0>;
+L_0x55e5b6872210 .functor BUFT 1, C8<770>, C4<0>, C4<0>, C4<0>;
+L_0x55e5b6872700 .functor NMOS 1, L_0x55e5b6872210, v0x55e5b6871ed0_0, C4<0>, C4<0>;
+L_0x55e5b6872840 .functor PMOS 1, L_0x55e5b68725f0, v0x55e5b6871e30_0, C4<0>, C4<0>;
+L_0x55e5b6872900 .functor PMOS 1, L_0x55e5b68725f0, v0x55e5b6871ed0_0, C4<0>, C4<0>;
+v0x55e5b6871820_0 .net8 "GND", 0 0, L_0x55e5b6872210;  1 drivers, strength-aware
+L_0x55e5b68722b0 .functor BUFT 1, C8<771>, C4<0>, C4<0>, C4<0>;
+RS_0x7f4fdebed168 .resolv tri, L_0x55e5b68722b0, L_0x55e5b6872840, L_0x55e5b6872900;
+v0x55e5b6871900_0 .net8 "PWR", 0 0, RS_0x7f4fdebed168;  3 drivers, strength-aware
+v0x55e5b68719c0_0 .net "in1", 0 0, v0x55e5b6871e30_0;  1 drivers
+v0x55e5b6871a60_0 .net "in2", 0 0, v0x55e5b6871ed0_0;  1 drivers
+v0x55e5b6871b20_0 .net8 "n1", 0 0, L_0x55e5b6872700;  1 drivers, strength-aware
+v0x55e5b6871c30_0 .net "n2", 0 0, o0x7f4fdebed228;  0 drivers
+v0x55e5b6871cf0_0 .net8 "out", 0 0, L_0x55e5b68725f0;  alias, 1 drivers, strength-aware
+    .scope S_0x55e5b685a600;
+T_0 ;
+    %vpi_call/w 3 30 "$dumpfile", "dump.vcd" {0 0 0};
+    %vpi_call/w 3 30 "$dumpvars", 32'sb00000000000000000000000000000001 {0 0 0};
+    %vpi_call/w 3 31 "$monitor", "$time %0d: in1=%b, in2=%b, out=%b, t_value=%0d, strength=%v", $time, v0x55e5b6871e30_0, v0x55e5b6871ed0_0, v0x55e5b6871fa0_0, v0x55e5b68720a0_0, v0x55e5b6871fa0_0 {0 0 0};
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x55e5b6871e30_0, 0, 1;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x55e5b6871ed0_0, 0, 1;
+    %pushi/vec4 0, 0, 32;
+    %store/vec4 v0x55e5b68720a0_0, 0, 32;
+    ; show_stmt_assign_vector: Get l-value for compressed += operand
+    %load/vec4 v0x55e5b68720a0_0;
+    %pushi/vec4 1, 0, 32;
+    %add;
+    %store/vec4 v0x55e5b68720a0_0, 0, 32;
+    %delay 1, 0;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x55e5b6871ed0_0, 0, 1;
+    ; show_stmt_assign_vector: Get l-value for compressed += operand
+    %load/vec4 v0x55e5b68720a0_0;
+    %pushi/vec4 1, 0, 32;
+    %add;
+    %store/vec4 v0x55e5b68720a0_0, 0, 32;
+    %delay 1, 0;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x55e5b6871e30_0, 0, 1;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x55e5b6871ed0_0, 0, 1;
+    ; show_stmt_assign_vector: Get l-value for compressed += operand
+    %load/vec4 v0x55e5b68720a0_0;
+    %pushi/vec4 1, 0, 32;
+    %add;
+    %store/vec4 v0x55e5b68720a0_0, 0, 32;
+    %delay 1, 0;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x55e5b6871e30_0, 0, 1;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x55e5b6871ed0_0, 0, 1;
+    ; show_stmt_assign_vector: Get l-value for compressed += operand
+    %load/vec4 v0x55e5b68720a0_0;
+    %pushi/vec4 1, 0, 32;
+    %add;
+    %store/vec4 v0x55e5b68720a0_0, 0, 32;
+    %end;
+    .thread T_0;
+# The file index is used to find the file name in the following table.
+:file_names 4;
+    "N/A";
+    "<interactive>";
+    "-";
+    "shared/not_switch_tb.sv";
