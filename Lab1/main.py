@@ -198,7 +198,7 @@ class FloatingPointNumber:
            ((second.is_positive_zero or second.is_negative_zero) and (self.is_positive_inf or self.is_negative_inf)):
             return FloatingPointNumber(self.nan, self.size)
         
-        if (self.is_positive_inf and second.is_negetive_inf) or \
+        if (self.is_positive_inf and second.is_negative_inf) or \
            (second.is_positive_inf and self.is_negative_inf):
             return FloatingPointNumber(self.nan, self.size)
 
@@ -367,8 +367,8 @@ class FixedPointNumber:
 
     def __truediv__(self, second: Self) -> Self:
         if second.number == 0:
-            print("error")
-            exit(0)
+            sys.stderr.write("error\n")
+            exit(2)
 
         result = (self.signed << (self.b)) // second.signed
         result &= (1 << (self.a + self.b)) - 1
@@ -465,8 +465,8 @@ def to_class(number, number_type):
 if __name__ == '__main__':
     args = sys.argv[1:]
     if len(args) != 3 and len(args) != 5:
-        print("Wrong arguments count (need 3 or 5)")
-        exit(0)
+        sys.stderr.write("Wrong arguments count (need 3 or 5)")
+        exit(3)
 
     if len(args) == 3:
         args = args + [None, None]
@@ -479,8 +479,9 @@ if __name__ == '__main__':
 
     errors = check_input(number_type, round_method, number1, operation, number2)
     if len(errors):
-        print(*errors, sep='\n')
-        exit(0)
+        for error in errors:
+            sys.stderr.write(error + '\n')
+        exit(1)
 
     number1 = to_class(number1, number_type)
     result = number1
