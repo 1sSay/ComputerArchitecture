@@ -1,9 +1,8 @@
 module data_types_tb;
     reg a; reg [7:0] b; time t; 
-
     logic[3:0] data; logic x;
+    
     assign x = data[0];
-
     initial begin
         a = 1;              $display("1bit = %0d", a);
         b = 8'hF2;          $display("8bit_dec = %0d", b);
@@ -12,9 +11,8 @@ module data_types_tb;
         b = 8'd?;           $display("Z-state = %0d", b);
         t = $time;          $display("time = %0t", t);
 
-                            $display("data=0x%0h data=0b%0b x=%0b time=%0t", data, data, x, $time);
-        data = 4'hB;        $display("data=0x%0h data=0b%0b x=%0b time=%0t", data, data, x, $time);
-        #1;                 $display("data=0x%0h data=0b%0b x=%0b time=%0t", data, data, x, $time);
+                            $display("data=0x%0h data=0b%0b x=%0b", data, data, x);
+        data = 4'hB; #1;    $display("data=0x%0h data=0b%0b x=%0b", data, data, x);
     end
 
 endmodule

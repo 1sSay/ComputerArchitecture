@@ -17,6 +17,8 @@ module counter_tb;
 
     initial begin
         $dumpfile("dump.vcd"); $dumpvars(1, counter_tb);
+        $display(" t\tclk\trst\ten\t out == out");
+        $monitor("%2t\t%b\t%b\t%b\t%b == %d", $time, clk, reset, enable, out, out);
 
       	clk = 0;	reset = 1;  enable = 1;
         #1 reset = 0;
@@ -27,5 +29,5 @@ module counter_tb;
 
     always #1 clk = ~clk;
   
-    always @(posedge clk) $display("%0t\t%b %b %b %b == %d", $time, clk, reset, enable, out, out);
+    //always @(posedge clk) $display("%0t\t%b %b %b %b == %d", $time, clk, reset, enable, out, out);
 endmodule
