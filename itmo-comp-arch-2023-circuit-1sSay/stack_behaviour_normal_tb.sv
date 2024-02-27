@@ -25,7 +25,7 @@ module stack_behaviour_tb;
         $display("tb -> %s", OUTCSV);
             $display("TIMES -> %d", TIMES);
         $display("T\tO_DATA\tRESET\tCLK\tCOMMAND\tINDEX\tI_DATA");
-        $monitor("%0.0f\t%5b\t%3b\t%6b\t%4b\t%4b\t%5b", $realtime, O_DATA, RESET, CLK, COMMAND, INDEX, I_DATA); 
+        $monitor("%f\t%5b\t%3b\t%6b\t%4b\t%4b\t%5b", $realtime, O_DATA, RESET, CLK, COMMAND, INDEX, I_DATA); 
         fd = $fopen(OUTCSV, "w");
         $fdisplay(fd, "T\tO_DATA\tRESET\tCLK\tCOMMAND\tINDEX\tI_DATA");
         k = (TIMES < 5) ? 5 : TIMES;

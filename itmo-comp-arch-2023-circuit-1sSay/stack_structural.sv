@@ -140,7 +140,7 @@ module INCREMENT_MOD_5(increased, number);
               .number(number));
 
     wire not_i1;
-    nor(not_i1, increased3[1]);
+    not(not_i1, increased3[1]);
 
     wire nand_6;
     nand(nand_6, increased3[0], not_i1, increased3[2]);
@@ -211,23 +211,21 @@ module COUNTER_MOD_5(index, inc, dec, clock, reset);
     wire not_clock;
     not(not_clock, clock);
 
-    D_FRONT_RESET d0(index[0], not_i0, new_value[0], not_clock, reset);
-    D_FRONT_RESET d1(index[1], not_i1, new_value[1], not_clock, reset);
-    D_FRONT_RESET d2(index[2], not_i2, new_value[2], not_clock, reset);
+    wire not_reset;
+    not(not_reset, reset);
+
+    D_FRONT d0(index[0], not_i0, new_value[0], not_clock);
+    D_FRONT d1(index[1], not_i1, new_value[1], not_clock);
+    D_FRONT d2(index[2], not_i2, new_value[2], not_clock);
 
     wire [2:0] increased;
     INCREMENT_MOD_5 inc_number(increased, index);
-    wire [2:0] and_increased;
-    and(and_increased[0], increased[0], inc);
-    and(and_increased[1], increased[1], inc);
-    and(and_increased[2], increased[2], inc);
+    and and_inc[2:0](and_increased, increased, {inc,inc,inc});
 
     wire [2:0] decreased;
     DECREMENT_MOD_5 dec_number(decreased, index);
     wire [2:0] and_decreased;
-    and(and_decreased[0], decreased[0], dec);
-    and(and_decreased[1], decreased[1], dec);
-    and(and_decreased[2], decreased[2], dec);
+    and and_dec[2:0](and_decreased, decreased, {dec,dec,dec});
 
     wire not_inc, not_dec, and_same;
     not(not_inc, inc);
@@ -235,14 +233,13 @@ module COUNTER_MOD_5(index, inc, dec, clock, reset);
     and(and_same, not_inc, not_dec);
 
     wire [2:0] same;
-    and(same[0], index[0], and_same);
-    and(same[1], index[1], and_same);
-    and(same[2], index[2], and_same);
+    and and_prev[2:0](same, index, {and_same,and_same,and_same});
+
+    output wire [2:0] new_value_nonreset;
+    or or_new[2:0](new_value_nonreset, and_increased, and_decreased, same);
 
     wire [2:0] new_value;
-    or(new_value[0], and_increased[0], and_decreased[0], same[0]);
-    or(new_value[1], and_increased[1], and_decreased[1], same[1]);
-    or(new_value[2], and_increased[2], and_decreased[2], same[2]);
+    and and_reset[2:0](new_value, new_value_nonreset, {reset,reset,reset});
 endmodule
 
 module MEMORY_CELL(odata, idata, c);
@@ -307,7 +304,6 @@ module INVERT5(ovalue, ivalue);
     input wire [2:0] ivalue;
 
     supply0 zero;
-
 
     wire [3:0] hehe; // not hehe :(
     or(hehe[0], ivalue[0]);
@@ -374,6 +370,7 @@ module MEMORY(odata, push, pop, get, idata, index, get_index, reset);
     wire [4:0] push_index;
     DECODER3TO5_IF push_decoder(push_index[0], push_index[1], push_index[2], push_index[3], push_index[4],
                                 index, push);
+
     wire [4:0] memory_clock;
     or or_memory_clock[4:0](memory_clock, push_index,
                             {reset_line,reset_line,reset_line,reset_line,reset_line});
@@ -418,13 +415,15 @@ module MEMORY(odata, push, pop, get, idata, index, get_index, reset);
 endmodule
 
 module stack_structural_easy(
-    output wire[3:0] O_DATA, 
+    output wire[3:0] O_DATA,
     input wire RESET, 
     input wire CLK, 
     input wire[1:0] COMMAND, 
     input wire[2:0] INDEX,
     input wire[3:0] I_DATA
     );
+
+    or or_index[2:0](cur_index, top_index);
 
     wire nope, push, pop, get;
     DECODER2TO4 command_decoder(nope, push, pop, get, COMMAND);
@@ -441,41 +440,3 @@ module stack_structural_easy(
 
     MEMORY stack_memory(O_DATA, sync_push, sync_pop, sync_get, I_DATA, top_index, INDEX, RESET);
 endmodule
-
-// module tb;
-//     reg CLOCK, RESET;
-//     reg [1:0] COMMAND;
-//     reg [2:0] INDEX;
-//     reg [3:0] IDATA;
-//     wire [3:0] ODATA;
-//     wire [2:0] cur;
-
-//     wire counter_index;
-
-//     stack_structural_easy stack(ODATA, cur, RESET, CLOCK, COMMAND, INDEX, IDATA);
-
-//     initial begin
-//         $dumpfile("dump.vcd"); $dumpvars(1);
-//         $monitor("| c - %b | command - %b | idata - %b | odata - %b | idx - %b | r - %b | I - %b", 
-//                  CLOCK, COMMAND, IDATA, ODATA, INDEX, RESET, cur);
-
-//         CLOCK = 0; RESET = 1; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 1; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 0; RESET = 1; COMMAND = 'b00; INDEX = 'b000;
-
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b01; INDEX = 'b000; IDATA = 'b0001;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b01; INDEX = 'b000; IDATA = 'b0010;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b01; INDEX = 'b000; IDATA = 'b0011;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b01; INDEX = 'b000; IDATA = 'b0100;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b01; INDEX = 'b000; IDATA = 'b1111;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-        
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b10; INDEX = 'b000;
-//         #1 CLOCK = 0; RESET = 0; COMMAND = 'b00; INDEX = 'b000;
-//         #1 CLOCK = 1; RESET = 0; COMMAND = 'b11; INDEX = 'b000;
-//     end
-// endmodule
